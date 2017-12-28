@@ -1,10 +1,12 @@
 package com.warpgatetechnologies.whatstheweather;
 
+import android.content.Context;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -12,9 +14,11 @@ import android.widget.TextView;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -43,12 +47,16 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void displayWeather(View view){
+    public void displayWeather(View view) throws UnsupportedEncodingException {
 
-        String city = edtEnterCity.getText().toString();
 
-        new DownloadWeather().execute("http://api.openweathermap.org/data/2.5/weather?q=" + city + "&appid=cd2c7c5c37ff272780840b65270e2de3");
 
+        String encodedCity = URLEncoder.encode(edtEnterCity.getText().toString(), "UTF-8");
+
+        new DownloadWeather().execute("http://api.openweathermap.org/data/2.5/weather?q=" + encodedCity + "&appid=cd2c7c5c37ff272780840b65270e2de3");
+
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromInputMethod(edtEnterCity.getWindowToken(), 0);
     }
 
     protected class DownloadWeather extends AsyncTask<String, Void, String>{
@@ -99,11 +107,13 @@ public class MainActivity extends AppCompatActivity {
             try {
                 weather = jsonParse(jsonString);
 
-                Log.d("MAIN", weather.main);
 
-                mianTextView.setText(weather.main);
-                descriptionTextView.setText(weather.description);
 
+                if (weather != null) {
+                    mianTextView.setText(weather.main);
+                    descriptionTextView.setText(weather.description);
+
+                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -114,13 +124,19 @@ public class MainActivity extends AppCompatActivity {
 
 
         WeatherObjects.Weather[] weathers;
-        Gson gson = new Gson();
+        try {
+            Gson gson = new Gson();
 
-        JsonObject object = new JsonParser().parse(result).getAsJsonObject();
+            JsonObject object = new JsonParser().parse(result).getAsJsonObject();
 
-        weathers = gson.fromJson(object.get("weather"), WeatherObjects.Weather[].class);
+            weathers = gson.fromJson(object.get("weather"), WeatherObjects.Weather[].class);
 
-        return weathers[0];
+            return weathers[0];
+        } catch (JsonSyntaxException e) {
+            e.printStackTrace();
+        }
+
+        return null;
 
     }
 }
